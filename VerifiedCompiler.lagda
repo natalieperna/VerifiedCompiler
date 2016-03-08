@@ -5,6 +5,7 @@ module VerifiedCompiler where
 open import Data.Fin hiding (_+_;_≤_) renaming (#_ to i)
 open import Data.Nat hiding (_≟_;_≤_)
 open import Data.Vec hiding (_>>=_; _⊛_)
+open import Data.Bool hiding (_≟_)
 \end{code}
 </div>
 
@@ -42,17 +43,17 @@ data Term (n : ℕ) : Set where
 data Cond (n : ℕ): Set where
   true : Cond n
   false : Cond n
-  _≤_ : Term n → Term n → Cond n
+  _<=_ : Term n → Term n → Cond n
   _==_ : Term n → Term n → Cond n
-  _∨_ : Cond n → Cond n → Cond n
-  _∧_ : Cond n → Cond n → Cond n
-  ¬_  : Cond n → Cond n
+  _or_ : Cond n → Cond n → Cond n
+  _and_ : Cond n → Cond n → Cond n
+  !_  : Cond n → Cond n
 
 data Command (n : ℕ) : Set where
   skip : Command n
-  _≔_ : Fin n → ℕ → Command n
-  _·_  : Command n → Command n → Command n
-  if_then_else_ : Cond n → Command n → Command n → Command n
+  _:=_ : Fin n → ℕ → Command n
+  _$_  : Command n → Command n → Command n -- end of statement marker
+  if_then_else_fi : Cond n → Command n → Command n → Command n
   while_do_ : Cond n → Command n
 \end{code}
 
@@ -63,6 +64,8 @@ about them. In Agda, the dynamic semantics are extremely clean, unencumbered by 
 
 \begin{code}
 infixl 5 _⊢_⇓ₐ_
+infixl 5 _⊢_⇓₀_
+infixl 5 _⊢_⇓_
 
 data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℕ n) : Term n → ℕ → Set where
   lit-e   : ∀{n}
@@ -96,6 +99,27 @@ data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℕ n) : Term n → ℕ → Set where
           → (v₁ ∷ E) ⊢ e₂ ⇓ₐ v₂
             ---------------------
           → E ⊢ Let e₁ In e₂ ⇓ₐ v₂
+
+
+data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℕ n) : Cond n → Bool → Set where
+  -- ...
+
+data _⊢_⇓_ {n : ℕ} ( E : Vec ℕ n) : Command n → (E : Vec ℕ n) → Set where
+  skip-e : 
+           -------------------
+           E ⊢ skip ⇓ E
+{-
+  assign-e : ∀{e₁}{v₁}{n}{x}
+             → E ⊢ e₁ ⇓ₐ v₁
+             ---------------
+             E ⊢ x := n ⇓ E [ x ]= n
+
+  seq-e : ∀{c₀ c₁}
+        → E₀ ⊢ c₀ ⇓ E₁
+        → E₁ ⊢ c₁ ⇓ E₂
+        --------------
+        → E₀ ⊢ c₀ $ c₁ ⇓ E₂
+-}
 \end{code}
 
 By using appropriate type indices, it is possible to extend this technique to work even for languages with elaborate static semantics.
