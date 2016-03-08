@@ -62,40 +62,40 @@ of the same, we would have to add such length constraints as explicit assumption
 about them. In Agda, the dynamic semantics are extremely clean, unencumbered by irritating details of the encoding:
 
 \begin{code}
-infixl 5 _⊢_⇓_
+infixl 5 _⊢_⇓ₐ_
 
-data _⊢_⇓_ {n : ℕ} ( E : Vec ℕ n) : Term n → ℕ → Set where
+data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℕ n) : Term n → ℕ → Set where
   lit-e   : ∀{n}
 
             -------------
-          → E ⊢ Lit n ⇓ n
+          → E ⊢ Lit n ⇓ₐ n
 
   times-e : ∀{e₁ e₂}{v₁ v₂}
 
-          → E ⊢ e₁ ⇓ v₁
-          → E ⊢ e₂ ⇓ v₂
+          → E ⊢ e₁ ⇓ₐ v₁
+          → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
-          → E ⊢ e₁ ⊠ e₂ ⇓ v₁ * v₂
+          → E ⊢ e₁ ⊠ e₂ ⇓ₐ v₁ * v₂
 
   plus-e  : ∀{e₁ e₂}{v₁ v₂}
 
-          → E ⊢ e₁ ⇓ v₁
-          → E ⊢ e₂ ⇓ v₂
+          → E ⊢ e₁ ⇓ₐ v₁
+          → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
-          → E ⊢ e₁ ⊞ e₂ ⇓ v₁ + v₂
+          → E ⊢ e₁ ⊞ e₂ ⇓ₐ v₁ + v₂
 
   var-e   : ∀{n}{x}
 
           → E [ x ]= n
             -------------
-          → E ⊢ Var x ⇓ n
+          → E ⊢ Var x ⇓ₐ n
 
   let-e   : ∀{e₁}{e₂}{v₁ v₂}
 
-          → E        ⊢ e₁ ⇓ v₁
-          → (v₁ ∷ E) ⊢ e₂ ⇓ v₂
+          → E        ⊢ e₁ ⇓ₐ v₁
+          → (v₁ ∷ E) ⊢ e₂ ⇓ₐ v₂
             ---------------------
-          → E ⊢ Let e₁ In e₂ ⇓ v₂
+          → E ⊢ Let e₁ In e₂ ⇓ₐ v₂
 \end{code}
 
 By using appropriate type indices, it is possible to extend this technique to work even for languages with elaborate static semantics.
@@ -313,23 +313,23 @@ $$
 As programs are lists of instructions, the evaluation of programs is naturally specified as a list of evaluations of instructions:
 
 \begin{code}
-infixl 5 _∣_∣_⇓_∣_
+infixl 5 _∣_∣_⇓ₐ_∣_
 
-data _∣_∣_⇓_∣_ {w s : ℕ}(W : Vec ℕ w)(S : Vec ℕ s) : ∀{w′ s′}
+data _∣_∣_⇓ₐ_∣_ {w s : ℕ}(W : Vec ℕ w)(S : Vec ℕ s) : ∀{w′ s′}
    → SM w s w′ s′
    → Vec ℕ w′ → Vec ℕ s′
    → Set where
 
-  halt-e : W ∣ S ∣ halt ⇓ W ∣ S
+  halt-e : W ∣ S ∣ halt ⇓ₐ W ∣ S
 
   _∷_ : ∀{w′ s′ w″ s″}{i}{is}
       → {W′ : Vec ℕ w′}{S′ : Vec ℕ s′}
       → {W″ : Vec ℕ w″}{S″ : Vec ℕ s″}
 
       → W ∣ S ∣ i ↦ W′ ∣ S′
-      → W′ ∣ S′ ∣ is ⇓ W″ ∣ S″
+      → W′ ∣ S′ ∣ is ⇓ₐ W″ ∣ S″
         --------------------------
-      → W ∣ S ∣ (i ∷ is) ⇓ W″ ∣ S″
+      → W ∣ S ∣ (i ∷ is) ⇓ₐ W″ ∣ S″
 
 \end{code}
 
@@ -342,10 +342,10 @@ _⟦⊕⟧_ : ∀{w w′ w″ s s′ s″}{P}{Q}
       → {W′ : Vec ℕ w′}{S′ : Vec ℕ s′}
       → {W″ : Vec ℕ w″}{S″ : Vec ℕ s″}
 
-      → W ∣ S ∣ P ⇓ W′ ∣ S′
-      → W′ ∣ S′ ∣ Q ⇓ W″ ∣ S″
+      → W ∣ S ∣ P ⇓ₐ W′ ∣ S′
+      → W′ ∣ S′ ∣ Q ⇓ₐ W″ ∣ S″
         -------------------------
-      → W ∣ S ∣ P ⊕ Q ⇓ W″ ∣ S″
+      → W ∣ S ∣ P ⊕ Q ⇓ₐ W″ ∣ S″
 halt-e ⟦⊕⟧ ys = ys
 x ∷ xs ⟦⊕⟧ ys = x ∷ (xs ⟦⊕⟧ ys)
 \end{code}
@@ -392,9 +392,9 @@ evaluation in the output is matched by the input. The output does not do anythin
 Sound : ∀{w s} → Term s → SM w s (suc w) s → Set
 Sound {w} t u = ∀{v}{E}{W : Vec ℕ w}
 
-              → W ∣ E ∣ u ⇓ (v ∷ W) ∣ E
+              → W ∣ E ∣ u ⇓ₐ (v ∷ W) ∣ E
                 -----------------------
-              → E ⊢ t ⇓ v
+              → E ⊢ t ⇓ₐ v
 \end{code}
 
 Note that we generalise the evaluation statements used here slightly to use arbitrary environments and stacks. This
@@ -407,9 +407,9 @@ evaluation in the input is matched by the output. The output does everything tha
 Complete : ∀{w s} → Term s → SM w s (suc w) s → Set
 Complete {w} t u = ∀{v}{E}{W : Vec ℕ w}
 
-                 → E ⊢ t ⇓ v
+                 → E ⊢ t ⇓ₐ v
                    -----------------------
-                 → W ∣ E ∣ u ⇓ (v ∷ W) ∣ E
+                 → W ∣ E ∣ u ⇓ₐ (v ∷ W) ∣ E
 \end{code}
 
 It is this _completeness_ condition that will allow us to automatically derive our code generator. Given a term $t$,
@@ -492,9 +492,9 @@ open import Relation.Binary.PropositionalEquality
 
 Sound′ : ∀{w s} → Term s → SM w s (suc w) s → Set
 Sound′ {w} t u = ∀{E E′}{W : Vec ℕ w}{W′}
-               → W ∣ E ∣ u ⇓ W′ ∣ E′
+               → W ∣ E ∣ u ⇓ₐ W′ ∣ E′
                  ------------------------------------------
-               → (E ≡ E′) × (tail W′ ≡ W) × E ⊢ t ⇓ head W′
+               → (E ≡ E′) × (tail W′ ≡ W) × E ⊢ t ⇓ₐ head W′
 
 sound′→sound : ∀{w s}{t}{u} → Sound′ {w}{s} t u → Sound t u
 sound′→sound p x with p x
@@ -511,8 +511,8 @@ evaluation of a sequential composition into evaluations of its component parts:
           {W″ : Vec ℕ w″}{S″ : Vec ℕ s″}
           {a : SM w s w′ s′}{b : SM w′ s′ w″ s″}
 
-       → W ∣ S ∣ a ⊕ b ⇓ W″ ∣ S″
-       → ∃[ W′ ] ∃[ S′ ] ((W ∣ S ∣ a ⇓ W′ ∣ S′) × (W′ ∣ S′ ∣ b ⇓ W″ ∣ S″))
+       → W ∣ S ∣ a ⊕ b ⇓ₐ W″ ∣ S″
+       → ∃[ W′ ] ∃[ S′ ] ((W ∣ S ∣ a ⇓ₐ W′ ∣ S′) × (W′ ∣ S′ ∣ b ⇓ₐ W″ ∣ S″))
 ⊕-elim {a = halt} p = _ , _ , halt-e , p
 ⊕-elim {a = a ∷ as} (x ∷ p) with ⊕-elim {a = as} p
 ... | _ , _ , p₁ , p₂ = _ , _ , x ∷ p₁ , p₂
