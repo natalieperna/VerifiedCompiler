@@ -2,8 +2,8 @@
 \begin{code}
 module VerifiedCompiler where
 
-open import Data.Fin hiding (_+_) renaming (#_ to i)
-open import Data.Nat hiding (_≟_)
+open import Data.Fin hiding (_+_;_≤_) renaming (#_ to i)
+open import Data.Nat hiding (_≟_;_≤_)
 open import Data.Vec hiding (_>>=_; _⊛_)
 \end{code}
 </div>
@@ -38,6 +38,22 @@ data Term (n : ℕ) : Set where
   _⊞_ : Term n → Term n → Term n
   Let_In_ : Term n → Term (suc n) → Term n
   Var : Fin n → Term n
+
+data Cond (n : ℕ): Set where
+  true : Cond n
+  false : Cond n
+  _≤_ : Term n → Term n → Cond n
+  _==_ : Term n → Term n → Cond n
+  _∨_ : Cond n → Cond n → Cond n
+  _∧_ : Cond n → Cond n → Cond n
+  ¬_  : Cond n → Cond n
+
+data Command (n : ℕ) : Set where
+  skip : Command n
+  _≔_ : Fin n → ℕ → Command n
+  _·_  : Command n → Command n → Command n
+  if_then_else_ : Cond n → Command n → Command n → Command n
+  while_do_ : Cond n → Command n
 \end{code}
 
 This allows us to express in the _type_ of our big-step semantics relation that the environment `E` (here we used the length-indexed
