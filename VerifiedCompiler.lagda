@@ -47,12 +47,12 @@ data Cond (n : ℕ): Set where
   _==_ : Term n → Term n → Cond n
   _or_ : Cond n → Cond n → Cond n
   _and_ : Cond n → Cond n → Cond n
-  !_  : Cond n → Cond n
+  not_  : Cond n → Cond n
 
 data Command (n : ℕ) : Set where
   skip : Command n
-  _:=_ : Fin n → ℕ → Command n
-  _$_  : Command n → Command n → Command n -- end of statement marker
+  _:=_ : Fin n → Term n → Command n
+  _!_  : Command n → Command n → Command n -- end of statement marker
   if_then_else_fi : Cond n → Command n → Command n → Command n
   while_do_ : Cond n → Command n
 \end{code}
