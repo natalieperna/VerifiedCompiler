@@ -472,12 +472,12 @@ the program is not explicitly emitted, but is inferred from the completeness pro
 \begin{code}
 codegen′ (t₁ ⊞ t₂) = _ , proof (proj₂ (codegen′ t₁)) (proj₂ (codegen′ t₂))
   where
-    proof : ∀ {u₁}{u₂} → Complete t₁ u₁  → Complete t₂ u₂ → Complete _ _
+    proof : ∀ {u₁}{u₂} → Complete t₁ u₁  → Complete t₂ u₂ → Complete (t₁ ⊞ t₂) _
     proof p₁ p₂ (plus-e t₁ t₂) = p₁ t₁ ⟦⊕⟧ p₂ t₂ ⟦⊕⟧ plus-e ∷ halt-e
 
 codegen′ (t₁ ⊠ t₂) = _ , proof (proj₂ (codegen′ t₁)) (proj₂ (codegen′ t₂))
   where
-    proof : ∀ {u₁}{u₂} → Complete t₁ u₁  → Complete t₂ u₂ → Complete _ _
+    proof : ∀ {u₁}{u₂} → Complete t₁ u₁  → Complete t₂ u₂ → Complete (t₁ ⊠ t₂) _
     proof p₁ p₂ (times-e t₁ t₂) = p₁ t₁ ⟦⊕⟧ p₂ t₂ ⟦⊕⟧ times-e ∷ halt-e
 \end{code}
 
@@ -488,7 +488,7 @@ with $\mathtt{pop}$.
 codegen′ (Let t₁ In t₂)
     = _ , proof (proj₂ (codegen′ t₁)) (proj₂ (codegen′ t₂))
   where
-    proof : ∀ {u₁}{u₂} → Complete t₁ u₁  → Complete t₂ u₂ → Complete _ _
+    proof : ∀ {u₁}{u₂} → Complete t₁ u₁  → Complete t₂ u₂ → Complete (Let t₁ In t₂) _
     proof p₁ p₂ (let-e t₁ t₂)
         = p₁ t₁ ⟦⊕⟧ push-e ∷ (p₂ t₂ ⟦⊕⟧ pop-e ∷ halt-e)
 \end{code}
