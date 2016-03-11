@@ -462,7 +462,7 @@ pick the correct index from the storage stack:
 \begin{code}
 codegen′ (Var x) = _ , proof
   where
-    proof : Complete _ _
+    proof : Complete (Var x) _
     proof (var-e x) = pick-e x ∷ halt-e
 \end{code}
 
