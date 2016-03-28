@@ -33,28 +33,32 @@ The `Fin` type, used to represent variables, only contains natural numbers up to
 variables that are not available.
 
 \begin{code}
-data Term (n : ℕ) : Set where
-  Lit : ℕ → Term n
-  _⊠_ : Term n → Term n → Term n
-  _⊞_ : Term n → Term n → Term n
-  Let_In_ : Term n → Term (suc n) → Term n
-  Var : Fin n → Term n
+data Exp (n : ℕ) : Set where
+  Var : Fin n → Exp n
+  -- Instead of allowing arbitrary functions, we will include only:
+  -- - constant literal symbols, Lit
+  -- - multiplication, ⊠
+  -- - addition, ⊞
+  Lit : ℕ → Exp n
+  _⊠_ : Exp n → Exp n → Exp n
+  _⊞_ : Exp n → Exp n → Exp n
 
-data Cond (n : ℕ): Set where
+data Cond (n : ℕ): Set where -- Equivalent to Exp_{bool}
+  -- f^{bool} ∈ F^{Exp}:
   true : Cond n
   false : Cond n
-  _<=_ : Term n → Term n → Cond n
-  _==_ : Term n → Term n → Cond n
+  _<=_ : Exp n → Exp n → Cond n
+  _==_ : Exp n → Exp n → Cond n
   _or_ : Cond n → Cond n → Cond n
   _and_ : Cond n → Cond n → Cond n
   not_  : Cond n → Cond n
 
-data Command (n : ℕ) : Set where
-  skip : Command n
-  _:=_ : Fin n → Term n → Command n
-  _!_  : Command n → Command n → Command n -- end of statement marker
-  if_then_else_fi : Cond n → Command n → Command n → Command n
-  while_do_ : Cond n → Command n
+data Comm (n : ℕ) : Set where
+  skip : Comm n
+  _,_  : Comm n → Comm n → Comm n -- sequential composition
+  _:=_ : Fin n → Exp n → Comm n
+  if_then_else_fi : Cond n → Comm n → Comm n → Comm n
+  while_do_ : Cond n → Comm n
 \end{code}
 
 This allows us to express in the _type_ of our big-step semantics relation that the environment `E` (here we used the length-indexed
@@ -67,7 +71,7 @@ infixl 5 _⊢_⇓ₐ_
 infixl 5 _⊢_⇓₀_
 infixl 5 _⊢_⇓_
 
-data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℕ n) : Term n → ℕ → Set where
+data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℕ n) : Exp n → ℕ → Set where
   lit-e   : ∀{n}
 
             -------------
@@ -93,18 +97,11 @@ data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℕ n) : Term n → ℕ → Set where
             -------------
           → E ⊢ Var x ⇓ₐ n
 
-  let-e   : ∀{e₁}{e₂}{v₁ v₂}
-
-          → E        ⊢ e₁ ⇓ₐ v₁
-          → (v₁ ∷ E) ⊢ e₂ ⇓ₐ v₂
-            ---------------------
-          → E ⊢ Let e₁ In e₂ ⇓ₐ v₂
-
 
 data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℕ n) : Cond n → Bool → Set where
   -- ...
 
-data _⊢_⇓_ {n : ℕ} ( E : Vec ℕ n) : Command n → (E : Vec ℕ n) → Set where
+data _⊢_⇓_ {n : ℕ} ( E : Vec ℕ n) : Comm n → (E : Vec ℕ n) → Set where
   skip-e : 
            -------------------
            E ⊢ skip ⇓ E
@@ -400,7 +397,7 @@ We define a compiler's correctness to be the commutativity of the following diag
 
 $$
   \xymatrix{
-     \text{Term}\ar@{=>}[d] \ar^{\mathtt{compile}}[r] & \mathsf{SM} \ar@{=>}[d] \\
+     \text{Exp}\ar@{=>}[d] \ar^{\mathtt{compile}}[r] & \mathsf{SM} \ar@{=>}[d] \\
      \mathbb{N}\ar_{::\ []}[r] & \text{Stack} \\
 }
 $$
@@ -413,7 +410,7 @@ evaluation in the output is matched by the input. The output does not do anythin
 
 \begin{code}
 -- Sound t u means that u is a sound translation of t
-Sound : ∀{w s} → Term s → SM w s (suc w) s → Set
+Sound : ∀{w s} → Exp s → SM w s (suc w) s → Set
 Sound {w} t u = ∀{v}{E}{W : Vec ℕ w}
 
               → W ∣ E ∣ u ⇓ₐ (v ∷ W) ∣ E
@@ -428,7 +425,7 @@ is to allow our induction to proceed smoothly.
 evaluation in the input is matched by the output. The output does everything that the input does.
 
 \begin{code}
-Complete : ∀{w s} → Term s → SM w s (suc w) s → Set
+Complete : ∀{w s} → Exp s → SM w s (suc w) s → Set
 Complete {w} t u = ∀{v}{E}{W : Vec ℕ w}
 
                  → E ⊢ t ⇓ₐ v
@@ -442,7 +439,7 @@ that $u$ is a complete translation of $t$:
 
 \begin{code}
 codegen′  : ∀{w s}
-          → (t : Term s)
+          → (t : Exp s)
           → Σ[ u ∈ SM w s (suc w) s ] Complete t u
 \end{code}
 
@@ -481,24 +478,12 @@ codegen′ (t₁ ⊠ t₂) = _ , proof (proj₂ (codegen′ t₁)) (proj₂ (cod
     proof p₁ p₂ (times-e t₁ t₂) = p₁ t₁ ⟦⊕⟧ p₂ t₂ ⟦⊕⟧ times-e ∷ halt-e
 \end{code}
 
-The variable-binding form $\mathtt{let}$ pushes the variable to the storage stack and cleans up after evaluation exits the scope
-with $\mathtt{pop}$.
-
-\begin{code}
-codegen′ (Let t₁ In t₂)
-    = _ , proof (proj₂ (codegen′ t₁)) (proj₂ (codegen′ t₂))
-  where
-    proof : ∀ {u₁}{u₂} → Complete t₁ u₁  → Complete t₂ u₂ → Complete (Let t₁ In t₂) _
-    proof p₁ p₂ (let-e t₁ t₂)
-        = p₁ t₁ ⟦⊕⟧ push-e ∷ (p₂ t₂ ⟦⊕⟧ pop-e ∷ halt-e)
-\end{code}
-
 We can extract a more standard-looking code generator function simply by throwing away the proof that our code generator
 produces.
 
 \begin{code}
 codegen : ∀{w s}
-        → Term s
+        → Exp s
         → SM w s (suc w) s
 codegen {w}{s} t = proj₁ (codegen′ {w}{s} t)
 \end{code}
@@ -514,7 +499,7 @@ in the original formulation of soundness. We prove that our new formulation stil
 \begin{code}
 open import Relation.Binary.PropositionalEquality
 
-Sound′ : ∀{w s} → Term s → SM w s (suc w) s → Set
+Sound′ : ∀{w s} → Exp s → SM w s (suc w) s → Set
 Sound′ {w} t u = ∀{E E′}{W : Vec ℕ w}{W′}
                → W ∣ E ∣ u ⇓ₐ W′ ∣ E′
                  ------------------------------------------
@@ -545,7 +530,7 @@ evaluation of a sequential composition into evaluations of its component parts:
 Then the soundness proof is given as a boatload of rule inversion and matching on equalities,
 to convince Agda that there is no other way to possibly evaluate the compiler output:
 \begin{code}
-soundness : ∀{w s}{t : Term s} → Sound′ {w} t (codegen t)
+soundness : ∀{w s}{t : Exp s} → Sound′ {w} t (codegen t)
 soundness {t = Lit x} (num-e     ∷ halt-e) = refl , refl , lit-e
 soundness {t = Var x} (pick-e x₁ ∷ halt-e) = refl , refl , var-e x₁
 soundness {t = t₁ ⊠ t₂} x
@@ -572,18 +557,6 @@ soundness {t = t₁ ⊞ t₂} x
     | refl , refl , a
     | refl , refl , b
     = refl , refl , plus-e a b
-soundness {t = Let t₁ In t₂} x
-  with ⊕-elim {a = codegen t₁} x
-...  | _ ∷ _ , _ , p₁ , push-e ∷ q
-  with ⊕-elim {a = codegen t₂} q
-...  | _ ∷ _ , _ ∷ _ , p₂ , _
-  with soundness {t = t₁} p₁ | soundness {t = t₂} p₂
-soundness {t = Let t₁ In t₂} x
-  | _ ∷ ._ , ._      , _ , push-e ∷ q
-  | _ ∷ ._ , ._ ∷ ._ , _ , pop-e ∷ halt-e
-  | refl , refl , a
-  | refl , refl , b
-  = refl , refl , let-e a b
 \end{code}
 </details>
 
@@ -600,22 +573,20 @@ to precede variable names. The sigil `#` precedes numeric literals as Agda does 
 
 \begin{code}
 data Surf : Set where
-  LET_BE_IN_ : String → Surf → Surf → Surf
   _PLUS_     : Surf → Surf → Surf
   _TIMES_    : Surf → Surf → Surf
   $_         : String → Surf
   #_         : ℕ → Surf
 
-infixr 4 LET_BE_IN_
 infixl 5 _PLUS_
 infixl 6 _TIMES_
 infix 7 $_
 infix 7 #_
 \end{code}
 
-Unlike our `Term` AST, this surface syntax does not include any scope information, uses strings for variable names, and is
+Unlike our `Exp` AST, this surface syntax does not include any scope information, uses strings for variable names, and is
 more likely to be something that would be produced from a parser. In order to compile this language, we must first translate
-it into our wellformed-by-construction `Term` type, which necessitates _scope-checking_.
+it into our wellformed-by-construction `Exp` type, which necessitates _scope-checking_.
 
 <div class=hidden>
 \begin{code}
@@ -629,8 +600,7 @@ open import Relation.Nullary
 </div>
 
 \begin{code}
-check : ∀{n} → Vec String n → Surf → Maybe (Term n)
-check Γ (LET x BE s IN t) = pure Let_In_ ⊛ check Γ s ⊛ check (x ∷ Γ) t
+check : ∀{n} → Vec String n → Surf → Maybe (Exp n)
 check Γ (s PLUS  t)       = pure _⊞_     ⊛ check Γ s ⊛ check Γ t
 check Γ (s TIMES t)       = pure _⊠_     ⊛ check Γ s ⊛ check Γ t
 check Γ (# x)             = pure (Lit x)
@@ -652,49 +622,11 @@ compiler : Surf → Maybe (SM 0 0 1 0)
 compiler s = codegen <$> check [] s
 \end{code}
 
-Note that we can't really demonstrate correctness of the scope-checking function, save that if it outputs a `Term` $t$ then
-there are no scope errors in $t$, as it is impossible to construct a `Term` with scope errors. One possibility would be to
+Note that we can't really demonstrate correctness of the scope-checking function, save that if it outputs a `Exp` $t$ then
+there are no scope errors in $t$, as it is impossible to construct a `Exp` with scope errors. One possibility would be to
 define a semantics for the surface syntax, however this would necessitate a formalisation of substitution and other such unpleasant
 things. So, we shall gain assurance for this phase of the compiler by embedding some test cases and checking them automatically
 at compile time.
-
-If we take a simple example, say:
-
-\begin{code}
-example = LET "x" BE # 4
-           IN LET "y" BE # 5
-           IN LET "z" BE # 6
-           IN $ "x" TIMES $ "y" PLUS $ "z"
-\end{code}
-
-We expect that this program should correspond to the following $\mathsf{SM}$ program [^3]:
-
-\begin{code}
-result : SM 0 0 1 0
-result = num 4
-       ∷ push
-       ∷ num 5
-       ∷ push
-       ∷ num 6
-       ∷ push
-       ∷ pick (i 2)
-       ∷ pick (i 1)
-       ∷ times
-       ∷ pick (i 0)
-       ∷ plus
-       ∷ pop
-       ∷ pop
-       ∷ pop
-       ∷ halt
-\end{code}
-
-We can embed this test case as a type by constructing an equality value -- that way, the test will be re-run
-every time it is type-checked:
-
-\begin{code}
-test-example : compiler example ≡ just result
-test-example = refl
-\end{code}
 
 As this page is only generated when the Agda compiler type checks the code snippets, we know that this test has passed! Hooray!
 
