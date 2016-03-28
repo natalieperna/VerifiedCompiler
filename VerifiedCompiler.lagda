@@ -2,10 +2,16 @@
 \begin{code}
 module VerifiedCompiler where
 
-open import Data.Fin hiding (_+_;_≤_) renaming (#_ to i)
-open import Data.Nat hiding (_≟_;_≤_)
-open import Data.Vec hiding (_>>=_; _⊛_)
-open import Data.Bool hiding (_≟_)
+open import Data.Fin hiding (_+_;_-_;_≤_;_<_)
+open import Data.Nat hiding (_+_;_≤_;_≥_;_<_;_>_)
+open import Data.Integer renaming (
+  _+_ to plus;
+  _*_ to times;
+  -_ to negative;
+  _-_ to minus;
+  _≤_ to leq)
+open import Data.Vec
+open import Data.Bool hiding (if_then_else_) renaming (_∧_ to and; _∨_ to or)
 \end{code}
 </div>
 
@@ -24,7 +30,7 @@ for a virtual stack machine, and explain some of the useful features that depend
 ## Wellformedness
 
 One of the immediate advantages that dependent types give us is that we can encode the notion of _term wellformedness_
-in the type given to terms, rather than as a separate proposition that must be assumed by every theorem.
+in the type given to terms, rather than aCs a separate proposition that must be assumed by every theorem.
 
 Even in our language of arithmetic expressions and variables, which does not have much of a static semantics,
 we can still ensure that each variable used in the program is bound somewhere. We will use indices instead of variable names
@@ -33,32 +39,35 @@ The `Fin` type, used to represent variables, only contains natural numbers up to
 variables that are not available.
 
 \begin{code}
-data Exp (n : ℕ) : Set where
-  Var : Fin n → Exp n
-  -- Instead of allowing arbitrary functions, we will include only:
-  -- - constant literal symbols, Lit
-  -- - multiplication, ⊠
-  -- - addition, ⊞
-  Lit : ℕ → Exp n
-  _⊠_ : Exp n → Exp n → Exp n
-  _⊞_ : Exp n → Exp n → Exp n
+data Exp-int (n : ℕ) : Set where
+  Lit : ℤ → Exp-int n
+  Var : Fin n → Exp-int n
+  -_ : Exp-int n → Exp-int n
+  _+_ : Exp-int n → Exp-int n → Exp-int n
+  _-_ : Exp-int n → Exp-int n → Exp-int n
+  _×_ : Exp-int n → Exp-int n → Exp-int n
+  _div_ : Exp-int n → Exp-int n → Exp-int n
+  _mod_ : Exp-int n → Exp-int n → Exp-int n
 
-data Cond (n : ℕ): Set where -- Equivalent to Exp_{bool}
-  -- f^{bool} ∈ F^{Exp}:
-  true : Cond n
-  false : Cond n
-  _<=_ : Exp n → Exp n → Cond n
-  _==_ : Exp n → Exp n → Cond n
-  _or_ : Cond n → Cond n → Cond n
-  _and_ : Cond n → Cond n → Cond n
-  not_  : Cond n → Cond n
+data Exp-bool (n : ℕ): Set where
+  ⊤ : Exp-bool n
+  ⊥ : Exp-bool n
+  ¬_  : Exp-bool n → Exp-bool n
+  _∧_ : Exp-bool n → Exp-bool n → Exp-bool n
+  _∨_ : Exp-bool n → Exp-bool n → Exp-bool n
+  _≡_ : Exp-int n → Exp-int n → Exp-bool n
+  _≠_ : Exp-int n → Exp-int n → Exp-bool n
+  _<_ : Exp-int n → Exp-int n → Exp-bool n
+  _≤_ : Exp-int n → Exp-int n → Exp-bool n
+  _>_ : Exp-int n → Exp-int n → Exp-bool n
+  _≥_ : Exp-int n → Exp-int n → Exp-bool n
 
 data Comm (n : ℕ) : Set where
   skip : Comm n
   _,_  : Comm n → Comm n → Comm n -- sequential composition
-  _:=_ : Fin n → Exp n → Comm n
-  if_then_else_fi : Cond n → Comm n → Comm n → Comm n
-  while_do_ : Cond n → Comm n
+  _:=_ : Fin n → Exp-int n → Comm n
+  if_then_else_ : Exp-bool n → Comm n → Comm n → Comm n
+  while_do_ : Exp-bool n → Comm n
 \end{code}
 
 This allows us to express in the _type_ of our big-step semantics relation that the environment `E` (here we used the length-indexed
@@ -71,7 +80,7 @@ infixl 5 _⊢_⇓ₐ_
 infixl 5 _⊢_⇓₀_
 infixl 5 _⊢_⇓_
 
-data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℕ n) : Exp n → ℕ → Set where
+data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℤ n) : Exp-int n → ℤ → Set where
   lit-e   : ∀{n}
 
             -------------
@@ -82,14 +91,14 @@ data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℕ n) : Exp n → ℕ → Set where
           → E ⊢ e₁ ⇓ₐ v₁
           → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
-          → E ⊢ e₁ ⊠ e₂ ⇓ₐ v₁ * v₂
+          → E ⊢ e₁ × e₂ ⇓ₐ times v₁ v₂
 
   plus-e  : ∀{e₁ e₂}{v₁ v₂}
 
           → E ⊢ e₁ ⇓ₐ v₁
           → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
-          → E ⊢ e₁ ⊞ e₂ ⇓ₐ v₁ + v₂
+          → E ⊢ e₁ + e₂ ⇓ₐ plus v₁ v₂
 
   var-e   : ∀{n}{x}
 
@@ -98,10 +107,10 @@ data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℕ n) : Exp n → ℕ → Set where
           → E ⊢ Var x ⇓ₐ n
 
 
-data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℕ n) : Cond n → Bool → Set where
+data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
   -- ...
 
-data _⊢_⇓_ {n : ℕ} ( E : Vec ℕ n) : Comm n → (E : Vec ℕ n) → Set where
+data _⊢_⇓_ {n : ℕ} ( E : Vec ℤ n) : Comm n → (E : Vec ℤ n) → Set where
   skip-e : 
            -------------------
            E ⊢ skip ⇓ E
@@ -124,531 +133,3 @@ For example, linear type systems (see @ATAPL) can be encoded by indexing terms b
 being _wellformed_ and being _well-typed_ is entirely arbitrary. It's possible to use relatively simple terms and encode static semantics
 as a separate judgement, or to put the entire static semantics inside the term structure, or to use a mixture of both. In this simple example,
 our static semantics only ensure variables are in scope, so it makes sense to encode the entire static semantics in the terms themselves.
-
-
-Similar tricks can be employed when encoding our target language, the stack machine $\mathsf{SM}$. This machine consists of two
-stacks of numbers, the _working_ stack $\mathsf{W}$ and the _storage_ stack $\mathsf{S}$, and a program to evaluate. A program is a list of _instructions_.
-
-There are six instructions in total, each of which manipulate these two stacks in various ways.
-When encoding these instructions in Agda, we index the `Inst` type by the size of both stacks before and after execution of
-the instruction:
-
-\begin{code}
-data Inst  : ℕ → ℕ → ℕ → ℕ → Set where
-  num   : ∀{w s} → ℕ → Inst w s (suc w) s
-  plus  : ∀{w s} → Inst (suc (suc w)) s (suc w) s
-  times : ∀{w s} → Inst (suc (suc w)) s (suc w) s
-  push  : ∀{w s} → Inst (suc w) s w (suc s)
-  pick  : ∀{w s} → Fin s → Inst w s (suc w) s
-  pop   : ∀{w s} → Inst w (suc s) w s
-\end{code}
-
-Then, we can define a simple type for $\mathsf{SM}$ programs, essentially a list of instructions where the stack sizes of
-consecutive instructions must match. This makes it impossible to construct a $\mathsf{SM}$ program with an underflow error:
-
-\begin{code}
-data SM (w s : ℕ) : ℕ → ℕ → Set where
-  halt : SM w s w s
-  _∷_  : ∀{w′ s′ w″ s″} → Inst w s w′ s′ → SM w′ s′ w″ s″ → SM w s w″ s″
-\end{code}
-
-We also define a simple sequential composition operator, equivalent to list append (`++`):
-
-\begin{code}
-infixr 5 _⊕_
-_⊕_ : ∀{w s w′ s′ w″ s″} → SM w s w′ s′ → SM w′ s′ w″ s″ → SM w s w″ s″
-halt    ⊕ q = q
-(x ∷ p) ⊕ q = x ∷ (p ⊕ q)
-\end{code}
-
-
-The semantics of each instruction are given by the following relation, which takes the two stacks and an instruction
-as input, returning the two updated stacks as output. Note the size of each stack is proscribed by the type of the instruction,
-just as the size of the environment was proscribed by the type of the term in the source language, which eliminates the need
-to add tedious wellformedness assumptions to theorems or rules.
-
-\begin{code}
-infixl 5 _∣_∣_↦_∣_
-
-data _∣_∣_↦_∣_ : ∀{w s w′ s′}
-   → Vec ℕ w → Vec ℕ s
-   → Inst w s w′ s′
-   → Vec ℕ w′ → Vec ℕ s′
-   → Set where
-
-\end{code}
-
-The semantics of each instruction are as follows:
-
-- $\mathtt{num}\ n$ (where $n \in \mathbb{N}$), pushes $n$ to $\mathsf{W}$.
-
-$$
-\newcommand{\blktriangle}{\scriptstyle \blacktriangle}
-\def\g#1{\save
-[].[ddddddrrr]!C="g#1"*[F]\frm{}\restore}%
-\xymatrix@R=0.01em@C=0.4em{
-\g1 &              &                & & & & & & \g2 &              &               & &\\
-&              &                & & & & & &    & 7             &               & &\\
-&              &                & & & & & &    & \blktriangle  &               & &\\
-& 3            & 5              & & & & & &    & 3             & 5             & &\\
-& {}^\bullet     & {}^\bullet       & & & & & &    & {}^\bullet & {}^\bullet & &\\
-& *+=<18pt,18pt>[F-,]{\mathsf{W}} & *+=<18pt,18pt>[F-,]{\mathsf{S}} & & & & & &    & *+=<18pt,18pt>[F-,]{\mathsf{W}}  & *+=<18pt,18pt>[F-,]{\mathsf{S}}  & &\\
-&              &                & & & & & &    &               &               & &
-\ar^*{\mathtt{num}\ 7} "g1";"g2"
-}
-$$
-
-\begin{code}
-  num-e   : ∀{w s}{n}{W : Vec _ w}{S : Vec _ s}
-
-            -------------------------
-          → W ∣ S ∣ num n ↦ n ∷ W ∣ S
-\end{code}
-
- - $\mathtt{plus}$, pops two numbers from $\mathsf{W}$ and pushes their sum back to $\mathsf{W}$.
-
-$$
-\newcommand{\blktriangle}{\scriptstyle \blacktriangle}
-\def\g#1{\save
-[].[ddddddrrr]!C="g#1"*[F]\frm{}\restore}%
-\xymatrix@R=0.01em@C=0.4em{
-\g1 &              &                & & & & & & \g2 &              &               & &\\
-& 7            &                & & & & & &    &               &               & &\\
-& \blktriangle &                & & & & & &    &               &               & &\\
-& 3            & 5              & & & & & &    & 10            & 5             & &\\
-& {}^\bullet     & {}^\bullet       & & & & & &    & {}^\bullet & {}^\bullet & &\\
-& *+=<18pt,18pt>[F-,]{\mathsf{W}} & *+=<18pt,18pt>[F-,]{\mathsf{S}} & & & & & &    & *+=<18pt,18pt>[F-,]{\mathsf{W}}  & *+=<18pt,18pt>[F-,]{\mathsf{S}}  & &\\
-&              &                & & & & & &    &               &               & &
-\ar^*{\mathtt{plus}} "g1";"g2"
-}
-$$
-
-\begin{code}
-  plus-e  : ∀{w s}{n m}{W : Vec _ w}{S : Vec _ s}
-
-            ----------------------------------------
-          → (n ∷ m ∷ W) ∣ S ∣ plus ↦ (m + n ∷ W) ∣ S
-\end{code}
-
- - $\mathtt{times}$, pops two numbers from $\mathsf{W}$ and pushes their product back to $\mathsf{W}$.
-
-$$
-\newcommand{\blktriangle}{\scriptstyle \blacktriangle}
-\def\g#1{\save
-[].[ddddddrrr]!C="g#1"*[F]\frm{}\restore}%
-\xymatrix@R=0.01em@C=0.4em{
-\g1 &              &                & & & & & & \g2 &              &               & &\\
-& 7            &                & & & & & &    &               &               & &\\
-& \blktriangle &                & & & & & &    &               &               & &\\
-& 3            & 5              & & & & & &    & 21            & 5             & &\\
-& {}^\bullet     & {}^\bullet       & & & & & &    & {}^\bullet & {}^\bullet & &\\
-& *+=<18pt,18pt>[F-,]{\mathsf{W}} & *+=<18pt,18pt>[F-,]{\mathsf{S}} & & & & & &    & *+=<18pt,18pt>[F-,]{\mathsf{W}}  & *+=<18pt,18pt>[F-,]{\mathsf{S}}  & &\\
-&              &                & & & & & &    &               &               & &
-\ar^*{\mathtt{times}} "g1";"g2"
-}
-$$
-
-\begin{code}
-  times-e : ∀{w s}{n m}{W : Vec _ w}{S : Vec _ s}
-
-            -----------------------------------------
-          → (n ∷ m ∷ W) ∣ S ∣ times ↦ (m * n ∷ W) ∣ S
-\end{code}
-
- - $\mathtt{push}$, pops a number from $\mathsf{W}$ and pushes it to $\mathsf{S}$.
-
-$$
-\newcommand{\blktriangle}{\scriptstyle \blacktriangle}
-\def\g#1{\save
-[].[ddddddrrr]!C="g#1"*[F]\frm{}\restore}%
-\xymatrix@R=0.01em@C=0.4em{
-\g1 &              &                & & & & & & \g2 &              &               & &\\
-&                  &                & & & & & &    &               & 21            & &\\
-&                  &                & & & & & &    &               & \blktriangle              & &\\
-& 21               & 5              & & & & & &    &               & 5             & &\\
-& {}^\bullet       & {}^\bullet       & & & & & &    & {}^\bullet & {}^\bullet & &\\
-& *+=<18pt,18pt>[F-,]{\mathsf{W}} & *+=<18pt,18pt>[F-,]{\mathsf{S}} & & & & & &    & *+=<18pt,18pt>[F-,]{\mathsf{W}}  & *+=<18pt,18pt>[F-,]{\mathsf{S}}  & &\\
-&              &                & & & & & &    &               &               & &
-\ar^*{\mathtt{push}} "g1";"g2"
-}
-$$
-
-\begin{code}
-  push-e  : ∀{w s}{n}{W : Vec _ w}{S : Vec _ s}
-
-            --------------------------------
-          → (n ∷ W) ∣ S ∣ push ↦ W ∣ (n ∷ S)
-\end{code}
-
- - $\mathtt{pick}\ n$ (where $0 \le n < |\mathsf{S}|\ $ ), pushes the number at position $n$ from the top of $\mathsf{S}$ onto $\mathsf{W}$.
-
-$$
-\newcommand{\blktriangle}{\scriptstyle \blacktriangle}
-\def\g#1{\save
-[].[ddddddrrr]!C="g#1"*[F]\frm{}\restore}%
-\xymatrix@R=0.01em@C=0.4em{
-\g1 &              &                & & & & & & \g2 &              &               & &\\
-&                  & 21             & & & & & &    &               & 21            & &\\
-&                  & \blktriangle   & & & & & &    &               & \blktriangle              & &\\
-&                  & 5              & & & & & &    &  5            & 5             & &\\
-& {}^\bullet       & {}^\bullet       & & & & & &    & {}^\bullet & {}^\bullet & &\\
-& *+=<18pt,18pt>[F-,]{\mathsf{W}} & *+=<18pt,18pt>[F-,]{\mathsf{S}} & & & & & &    & *+=<18pt,18pt>[F-,]{\mathsf{W}}  & *+=<18pt,18pt>[F-,]{\mathsf{S}}  & &\\
-&              &                & & & & & &    &               &               & &
-\ar^*{\mathtt{pick}\ 1} "g1";"g2"
-}
-$$
-
-\begin{code}
-  pick-e  : ∀{w s}{x}{n}{W : Vec _ w}{S : Vec _ s}
-
-          → S [ x ]= n
-            ----------------------------
-          → W ∣ S ∣ pick x ↦ (n ∷ W) ∣ S
-\end{code}
-
- - $\mathtt{pop}$, removes the top number from $\mathsf{S}$.
-
-$$
-\newcommand{\blktriangle}{\scriptstyle \blacktriangle}
-\def\g#1{\save
-[].[ddddddrrr]!C="g#1"*[F]\frm{}\restore}%
-\xymatrix@R=0.01em@C=0.4em{
-\g1 &              &                & & & & & & \g2 &              &               & &\\
-&                  & 21             & & & & & &    &               &               & &\\
-&                  & \blktriangle   & & & & & &    &               &                           & &\\
-& 5                & 5              & & & & & &    &  5            & 5             & &\\
-& {}^\bullet       & {}^\bullet       & & & & & &    & {}^\bullet & {}^\bullet & &\\
-& *+=<18pt,18pt>[F-,]{\mathsf{W}} & *+=<18pt,18pt>[F-,]{\mathsf{S}} & & & & & &    & *+=<18pt,18pt>[F-,]{\mathsf{W}}  & *+=<18pt,18pt>[F-,]{\mathsf{S}}  & &\\
-&              &                & & & & & &    &               &               & &
-\ar^*{\mathtt{pop}} "g1";"g2"
-}
-$$
-
-\begin{code}
-  pop-e   : ∀{w s}{n}{W : Vec _ w}{S : Vec _ s}
-
-            -------------------------
-          → W ∣ (n ∷ S) ∣ pop ↦ W ∣ S
-\end{code}
-
-As programs are lists of instructions, the evaluation of programs is naturally specified as a list of evaluations of instructions:
-
-\begin{code}
-infixl 5 _∣_∣_⇓ₐ_∣_
-
-data _∣_∣_⇓ₐ_∣_ {w s : ℕ}(W : Vec ℕ w)(S : Vec ℕ s) : ∀{w′ s′}
-   → SM w s w′ s′
-   → Vec ℕ w′ → Vec ℕ s′
-   → Set where
-
-  halt-e : W ∣ S ∣ halt ⇓ₐ W ∣ S
-
-  _∷_ : ∀{w′ s′ w″ s″}{i}{is}
-      → {W′ : Vec ℕ w′}{S′ : Vec ℕ s′}
-      → {W″ : Vec ℕ w″}{S″ : Vec ℕ s″}
-
-      → W ∣ S ∣ i ↦ W′ ∣ S′
-      → W′ ∣ S′ ∣ is ⇓ₐ W″ ∣ S″
-        --------------------------
-      → W ∣ S ∣ (i ∷ is) ⇓ₐ W″ ∣ S″
-
-\end{code}
-
-The semantics of sequential composition is predictably given by appending these lists:
-
-\begin{code}
-infixl 4 _⟦⊕⟧_
-_⟦⊕⟧_ : ∀{w w′ w″ s s′ s″}{P}{Q}
-      → {W : Vec ℕ w}{S : Vec ℕ s}
-      → {W′ : Vec ℕ w′}{S′ : Vec ℕ s′}
-      → {W″ : Vec ℕ w″}{S″ : Vec ℕ s″}
-
-      → W ∣ S ∣ P ⇓ₐ W′ ∣ S′
-      → W′ ∣ S′ ∣ Q ⇓ₐ W″ ∣ S″
-        -------------------------
-      → W ∣ S ∣ P ⊕ Q ⇓ₐ W″ ∣ S″
-halt-e ⟦⊕⟧ ys = ys
-x ∷ xs ⟦⊕⟧ ys = x ∷ (xs ⟦⊕⟧ ys)
-\end{code}
-
-## Writing by proving
-
-Having formally defined our source and target languages, we can now prove our compiler correct -- even though we haven't
-written a compiler yet!
-
-One of the other significant advantages dependent types bring to compiler verification is the elimination of repetition. In
-my larger Isabelle formalisation, the proof of the compiler's correctness largely duplicates the structure of
-the compiler itself, and this tight coupling means that proofs must be rewritten along with the program -- a highly tedious
-exercise. As dependently typed languages unify the language of code and proof, we can merely provide the correctness proof:
-in almost all cases, the correctness proof is so specific, that the program of which it demonstrates correctness can be
-_derived automatically_.
-
-<div class="hidden">
-\begin{code}
-open import Data.Product
-Exists = ∃
-syntax Exists (λ x → y ) = ∃[ x ] y
-open import Function
-open import Data.String
-\end{code}
-</div>
-
-We define a compiler's correctness to be the commutativity of the following diagram, as per @Hutton.
-
-$$
-  \xymatrix{
-     \text{Exp}\ar@{=>}[d] \ar^{\mathtt{compile}}[r] & \mathsf{SM} \ar@{=>}[d] \\
-     \mathbb{N}\ar_{::\ []}[r] & \text{Stack} \\
-}
-$$
-
-As we have not proven determinism for our semantics[^1], such a correctness condition must be shown
-by the conjunction of a _soundness_ and _completeness_ condition, similar to @Bahr.
-
-**Soundness** is a proof that the compiler output is a _refinement_ of the input, that is, every
-evaluation in the output is matched by the input. The output does not do anything that the input doesn't do.
-
-\begin{code}
--- Sound t u means that u is a sound translation of t
-Sound : ∀{w s} → Exp s → SM w s (suc w) s → Set
-Sound {w} t u = ∀{v}{E}{W : Vec ℕ w}
-
-              → W ∣ E ∣ u ⇓ₐ (v ∷ W) ∣ E
-                -----------------------
-              → E ⊢ t ⇓ₐ v
-\end{code}
-
-Note that we generalise the evaluation statements used here slightly to use arbitrary environments and stacks. This
-is to allow our induction to proceed smoothly.
-
-**Completeness** is a proof that the compiler output is an _abstraction_ of the input, that is, every
-evaluation in the input is matched by the output. The output does everything that the input does.
-
-\begin{code}
-Complete : ∀{w s} → Exp s → SM w s (suc w) s → Set
-Complete {w} t u = ∀{v}{E}{W : Vec ℕ w}
-
-                 → E ⊢ t ⇓ₐ v
-                   -----------------------
-                 → W ∣ E ∣ u ⇓ₐ (v ∷ W) ∣ E
-\end{code}
-
-It is this _completeness_ condition that will allow us to automatically derive our code generator. Given a term $t$,
-our generator will return a Σ-type, or _dependent pair_, containing a $\mathsf{SM}$ program called $u$ and a proof
-that $u$ is a complete translation of $t$:
-
-\begin{code}
-codegen′  : ∀{w s}
-          → (t : Exp s)
-          → Σ[ u ∈ SM w s (suc w) s ] Complete t u
-\end{code}
-
-For literals, we simply push the number of the literal onto the working stack:
-
-\begin{code}
-codegen′ (Lit x ) = _ , proof
-  where
-    proof : Complete _ _
-    proof lit-e = num-e ∷ halt-e
-\end{code}
-
-The code above never explicitly states what $\mathsf{SM}$ program to produce! Instead, it merely provides
-the completeness proof, and the rest can be inferred by unification. Similar elision can be used for variables, which
-pick the correct index from the storage stack:
-
-\begin{code}
-codegen′ (Var x) = _ , proof
-  where
-    proof : Complete (Var x) _
-    proof (var-e x) = pick-e x ∷ halt-e
-\end{code}
-
-The two binary operations are essentially the standard translation for an infix-to-postfix tree traversal, but once again
-the program is not explicitly emitted, but is inferred from the completeness proof used.
-
-\begin{code}
-codegen′ (t₁ ⊞ t₂) = _ , proof (proj₂ (codegen′ t₁)) (proj₂ (codegen′ t₂))
-  where
-    proof : ∀ {u₁}{u₂} → Complete t₁ u₁  → Complete t₂ u₂ → Complete (t₁ ⊞ t₂) _
-    proof p₁ p₂ (plus-e t₁ t₂) = p₁ t₁ ⟦⊕⟧ p₂ t₂ ⟦⊕⟧ plus-e ∷ halt-e
-
-codegen′ (t₁ ⊠ t₂) = _ , proof (proj₂ (codegen′ t₁)) (proj₂ (codegen′ t₂))
-  where
-    proof : ∀ {u₁}{u₂} → Complete t₁ u₁  → Complete t₂ u₂ → Complete (t₁ ⊠ t₂) _
-    proof p₁ p₂ (times-e t₁ t₂) = p₁ t₁ ⟦⊕⟧ p₂ t₂ ⟦⊕⟧ times-e ∷ halt-e
-\end{code}
-
-We can extract a more standard-looking code generator function simply by throwing away the proof that our code generator
-produces.
-
-\begin{code}
-codegen : ∀{w s}
-        → Exp s
-        → SM w s (suc w) s
-codegen {w}{s} t = proj₁ (codegen′ {w}{s} t)
-\end{code}
-
-
-<details>
-<summary>The soundness proof for this code generator isn't particularly illuminating and is rather awkwardly expressed. Nevertheless,
-for the truly brave, you may click here to view it.</summary>
-
-We use an alternative presentation of the soundness property, that makes explicit several equalities that are implicit
-in the original formulation of soundness. We prove that our new formulation still implies the original one.
-
-\begin{code}
-open import Relation.Binary.PropositionalEquality
-
-Sound′ : ∀{w s} → Exp s → SM w s (suc w) s → Set
-Sound′ {w} t u = ∀{E E′}{W : Vec ℕ w}{W′}
-               → W ∣ E ∣ u ⇓ₐ W′ ∣ E′
-                 ------------------------------------------
-               → (E ≡ E′) × (tail W′ ≡ W) × E ⊢ t ⇓ₐ head W′
-
-sound′→sound : ∀{w s}{t}{u} → Sound′ {w}{s} t u → Sound t u
-sound′→sound p x with p x
-... | refl , refl , q = q
-\end{code}
-
-As our soundness proof requires us to do a lot of rule inversion on the evaluation of $\mathsf{SM}$ programs,
-we need an eliminator for the introduction rule `_⟦⊕⟧_`, used in the completeness proof, which breaks an
-evaluation of a sequential composition into evaluations of its component parts:
-
-\begin{code}
-⊕-elim : ∀{w s w′ s′ w″ s″}
-          {W : Vec ℕ w}{S : Vec ℕ s}
-          {W″ : Vec ℕ w″}{S″ : Vec ℕ s″}
-          {a : SM w s w′ s′}{b : SM w′ s′ w″ s″}
-
-       → W ∣ S ∣ a ⊕ b ⇓ₐ W″ ∣ S″
-       → ∃[ W′ ] ∃[ S′ ] ((W ∣ S ∣ a ⇓ₐ W′ ∣ S′) × (W′ ∣ S′ ∣ b ⇓ₐ W″ ∣ S″))
-⊕-elim {a = halt} p = _ , _ , halt-e , p
-⊕-elim {a = a ∷ as} (x ∷ p) with ⊕-elim {a = as} p
-... | _ , _ , p₁ , p₂ = _ , _ , x ∷ p₁ , p₂
-\end{code}
-
-Then the soundness proof is given as a boatload of rule inversion and matching on equalities,
-to convince Agda that there is no other way to possibly evaluate the compiler output:
-\begin{code}
-soundness : ∀{w s}{t : Exp s} → Sound′ {w} t (codegen t)
-soundness {t = Lit x} (num-e     ∷ halt-e) = refl , refl , lit-e
-soundness {t = Var x} (pick-e x₁ ∷ halt-e) = refl , refl , var-e x₁
-soundness {t = t₁ ⊠ t₂} x
-  with ⊕-elim {a = codegen t₁ ⊕ codegen t₂} x
-...  | _ , _ , p , _
-  with ⊕-elim {a = codegen t₁} p
-...  | _ , _ , p₁ , p₂
-  with soundness {t = t₁} p₁ | soundness {t = t₂} p₂
-soundness {t = t₁ ⊠ t₂} x
-    | _  ∷  _ ∷  _ , ._ , _ , times-e ∷ halt-e
-    |      ._ ∷ ._ , ._ , _ , _
-    | refl , refl , a
-    | refl , refl , b
-    = refl , refl , times-e a b
-soundness {t = t₁ ⊞ t₂} x
-  with ⊕-elim {a = codegen t₁ ⊕ codegen t₂} x
-...  | _ , _ , p , _
-  with ⊕-elim {a = codegen t₁} p
-...  | _ , _ , p₁ , p₂
-  with soundness {t = t₁} p₁ | soundness {t = t₂} p₂
-soundness {t = t₁ ⊞ t₂} x
-    | _  ∷  _ ∷  _ , ._ , _ , plus-e ∷ halt-e
-    |      ._ ∷ ._ , ._ , _ , _
-    | refl , refl , a
-    | refl , refl , b
-    = refl , refl , plus-e a b
-\end{code}
-</details>
-
-## Compiler Frontend
-
-Now that we have a verified code generator, as a final flourish we'll implement a basic compiler frontend[^2] for our language
-and run it on some basic examples.
-
-We define a surface syntax as follows. In the tradition of all the greatest languages such as BASIC, FORTRAN and COBOL,
-capital letters are exclusively used, and English words are favoured over symbols because it makes the language
-readable to
-non-programmers. I should also acknowledge the definite influence of PHP, Perl and `sh` on the choice of the `$` sigil
-to precede variable names. The sigil `#` precedes numeric literals as Agda does not allow us to overload them.
-
-\begin{code}
-data Surf : Set where
-  _PLUS_     : Surf → Surf → Surf
-  _TIMES_    : Surf → Surf → Surf
-  $_         : String → Surf
-  #_         : ℕ → Surf
-
-infixl 5 _PLUS_
-infixl 6 _TIMES_
-infix 7 $_
-infix 7 #_
-\end{code}
-
-Unlike our `Exp` AST, this surface syntax does not include any scope information, uses strings for variable names, and is
-more likely to be something that would be produced from a parser. In order to compile this language, we must first translate
-it into our wellformed-by-construction `Exp` type, which necessitates _scope-checking_.
-
-<div class=hidden>
-\begin{code}
-open import Data.Maybe
-open import Category.Monad
-open import Category.Applicative
-import Level
-open RawMonad (monad {Level.zero})
-open import Relation.Nullary
-\end{code}
-</div>
-
-\begin{code}
-check : ∀{n} → Vec String n → Surf → Maybe (Exp n)
-check Γ (s PLUS  t)       = pure _⊞_     ⊛ check Γ s ⊛ check Γ t
-check Γ (s TIMES t)       = pure _⊠_     ⊛ check Γ s ⊛ check Γ t
-check Γ (# x)             = pure (Lit x)
-check Γ ($ x)             = pure Var     ⊛ find Γ x
- where
-   find : ∀{n} → Vec String n → String → Maybe (Fin n)
-   find [] s = nothing
-   find (x ∷ v) s with s ≟ x
-   ... | yes _ = just zero
-   ... | no  _ = suc <$> find v s
-\end{code}
-
-Note that this function is the only one in our development that is partial: it can fail if an undeclared variable is used. For
-this reason, we use the `Applicative` instance for `Maybe` to make the error handling more convenient.
-
-Our compiler function, then, merely composes our checker with our code generator:
-\begin{code}
-compiler : Surf → Maybe (SM 0 0 1 0)
-compiler s = codegen <$> check [] s
-\end{code}
-
-Note that we can't really demonstrate correctness of the scope-checking function, save that if it outputs a `Exp` $t$ then
-there are no scope errors in $t$, as it is impossible to construct a `Exp` with scope errors. One possibility would be to
-define a semantics for the surface syntax, however this would necessitate a formalisation of substitution and other such unpleasant
-things. So, we shall gain assurance for this phase of the compiler by embedding some test cases and checking them automatically
-at compile time.
-
-As this page is only generated when the Agda compiler type checks the code snippets, we know that this test has passed! Hooray!
-
-## Conclusions
-
-Working in Agda to verify compilers is a very different experience from that of implementing a certifying compiler in
-Haskell and Isabelle. In general, the _implementation_ of a compiler phase and the _justification of its correctness_
-are much, much closer together than in Agda than in my previous approach. This allows us to save a lot of effort by deriving
-programs from their proofs.
-
-Also, dependent types are sophisticated enough to allow arbitrary invariants to be encoded in the
-structure of terms, which makes it possible, with clever formalisations, to avoid having to discharge trivial proof obligations
-repeatedly. This is in stark contrast to traditional theorem provers like Isabelle, where irritating proof obligations are the
-norm, and heavyweight tactics must be used to discharge them en-masse.
-
-My next experiments will be to try and scale this kind of approach up to more realistic languages. I'll be sure to post again
-if I find anything interesting.
-
-#### References
-
-[^1]: The proof is boring and tedious.
-
-[^2]: Minus the parser.
-
-[^3]: I actually generated this program by running the code generator implemented earlier.
