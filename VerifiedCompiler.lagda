@@ -1,4 +1,3 @@
-<div class=hidden>
 \begin{code}
 module VerifiedCompiler where
 
@@ -13,30 +12,8 @@ open import Data.Integer renaming (
 open import Data.Vec
 open import Data.Bool hiding (if_then_else_) renaming (_∧_ to and; _∨_ to or)
 \end{code}
-</div>
 
-Recently my research has been centered around the development of a self-certifying compiler for a functional
-language with linear types called Cogent (see @Cogent). The compiler works by emitting, along with generated
-low-level code, a proof in Isabelle/HOL (see @Nipkow) that the generated code is a refinement of the original program,
-expressed via a simple functional semantics in HOL.
-
-As dependent types unify for us the language of code and proof, my current endeavour has been to explore how such a compiler
-would look if it were implemented and verified in a dependently typed programming language instead. In this post, I
-implement and verify a toy compiler for a language of arithmetic expressions and variables to an idealised assembly language
-for a virtual stack machine, and explain some of the useful features that dependent types give us for writing verified compilers.
-
-*The Agda snippets in this post are interactive! Click on a symbol to see its definition.*
-
-## Wellformedness
-
-One of the immediate advantages that dependent types give us is that we can encode the notion of _term wellformedness_
-in the type given to terms, rather than aCs a separate proposition that must be assumed by every theorem.
-
-Even in our language of arithmetic expressions and variables, which does not have much of a static semantics,
-we can still ensure that each variable used in the program is bound somewhere. We will use indices instead of variable names
-in the style of @deBruijn, and index terms by the _number of available variables_, a trick I first noticed in @McBride.
-The `Fin` type, used to represent variables, only contains natural numbers up to its index, which makes it impossible to use
-variables that are not available.
+RSD p. 135:
 
 \begin{code}
 data Exp-int (n : ℕ) : Set where
@@ -48,7 +25,9 @@ data Exp-int (n : ℕ) : Set where
   _×_ : Exp-int n → Exp-int n → Exp-int n
   --_div_ : Exp-int n → Exp-int n → Exp-int n
   --_mod_ : Exp-int n → Exp-int n → Exp-int n
+\end{code}
 
+\begin{code}
 data Exp-bool (n : ℕ): Set where
   ⊤ : Exp-bool n
   ⊥ : Exp-bool n
@@ -61,19 +40,20 @@ data Exp-bool (n : ℕ): Set where
   _≤_ : Exp-int n → Exp-int n → Exp-bool n
   _>_ : Exp-int n → Exp-int n → Exp-bool n
   _≥_ : Exp-int n → Exp-int n → Exp-bool n
+\end{code}
 
+RSD p. 131:
+
+\begin{code}
 data Comm (n : ℕ) : Set where
   skip : Comm n
-  _,_  : Comm n → Comm n → Comm n -- sequential composition
+  _,_  : Comm n → Comm n → Comm n
   _≔_ : Fin n → Exp-int n → Comm n
   if_then_else_ : Exp-bool n → Comm n → Comm n → Comm n
   while_do_ : Exp-bool n → Comm n → Comm n
 \end{code}
 
-This allows us to express in the _type_ of our big-step semantics relation that the environment `E` (here we used the length-indexed
-`Vec` type from the Agda standard library) should have a value for every available variable in the term. In any Isabelle specification
-of the same, we would have to add such length constraints as explicit assumptions, either in the semantics themselves or in theorems
-about them. In Agda, the dynamic semantics are extremely clean, unencumbered by irritating details of the encoding:
+RSD p. 135:
 
 \begin{code}
 infixl 5 _⊢_⇓ₐ_
@@ -164,8 +144,11 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
 -}
 -- TODO _>_ : Exp-int n → Exp-int n → Exp-bool n
 -- TODO _≥_ : Exp-int n → Exp-int n → Exp-bool n
+\end{code}
 
--- RSD p. 133
+RSD p. 133:
+
+\begin{code}
 data _⊢_⇓_ {n : ℕ} ( E : Vec ℤ n) : Comm n → (E : Vec ℤ n) → Set where
   skip-e : 
            -------------------
@@ -213,8 +196,3 @@ data _⊢_⇓_ {n : ℕ} ( E : Vec ℤ n) : Comm n → (E : Vec ℤ n) → Set w
           → E ⊢ while b do c ⇓ E
 \end{code}
 
-By using appropriate type indices, it is possible to extend this technique to work even for languages with elaborate static semantics.
-For example, linear type systems (see @ATAPL) can be encoded by indexing terms by type contexts (in a style similar to [Oleg](http://okmij.org/ftp/tagless-final/course/LinearLC.hs)). Therefore, the boundary between
-being _wellformed_ and being _well-typed_ is entirely arbitrary. It's possible to use relatively simple terms and encode static semantics
-as a separate judgement, or to put the entire static semantics inside the term structure, or to use a mixture of both. In this simple example,
-our static semantics only ensure variables are in scope, so it makes sense to encode the entire static semantics in the terms themselves.
