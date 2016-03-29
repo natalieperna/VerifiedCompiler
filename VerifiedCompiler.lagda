@@ -46,8 +46,8 @@ data Exp-int (n : ℕ) : Set where
   _+_ : Exp-int n → Exp-int n → Exp-int n
   _-_ : Exp-int n → Exp-int n → Exp-int n
   _×_ : Exp-int n → Exp-int n → Exp-int n
-  _div_ : Exp-int n → Exp-int n → Exp-int n
-  _mod_ : Exp-int n → Exp-int n → Exp-int n
+  --_div_ : Exp-int n → Exp-int n → Exp-int n
+  --_mod_ : Exp-int n → Exp-int n → Exp-int n
 
 data Exp-bool (n : ℕ): Set where
   ⊤ : Exp-bool n
@@ -65,7 +65,7 @@ data Exp-bool (n : ℕ): Set where
 data Comm (n : ℕ) : Set where
   skip : Comm n
   _,_  : Comm n → Comm n → Comm n -- sequential composition
-  _:=_ : Fin n → Exp-int n → Comm n
+  _≔_ : Fin n → Exp-int n → Comm n
   if_then_else_ : Exp-bool n → Comm n → Comm n → Comm n
   while_do_ : Exp-bool n → Comm n
 \end{code}
@@ -86,12 +86,17 @@ data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℤ n) : Exp-int n → ℤ → Set where
             -------------
           → E ⊢ Lit n ⇓ₐ n
 
-  times-e : ∀{e₁ e₂}{v₁ v₂}
+  var-e   : ∀{n}{x}
 
-          → E ⊢ e₁ ⇓ₐ v₁
-          → E ⊢ e₂ ⇓ₐ v₂
+          → E [ x ]= n
+            -------------
+          → E ⊢ Var x ⇓ₐ n
+
+  negative-e : ∀{e}{v}
+
+          → E ⊢ e ⇓ₐ v
             ---------------------
-          → E ⊢ e₁ × e₂ ⇓ₐ times v₁ v₂
+          → E ⊢ - e ⇓ₐ negative v
 
   plus-e  : ∀{e₁ e₂}{v₁ v₂}
 
@@ -100,32 +105,86 @@ data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℤ n) : Exp-int n → ℤ → Set where
             ---------------------
           → E ⊢ e₁ + e₂ ⇓ₐ plus v₁ v₂
 
-  var-e   : ∀{n}{x}
+  minus-e  : ∀{e₁ e₂}{v₁ v₂}
 
-          → E [ x ]= n
-            -------------
-          → E ⊢ Var x ⇓ₐ n
+          → E ⊢ e₁ ⇓ₐ v₁
+          → E ⊢ e₂ ⇓ₐ v₂
+            ---------------------
+          → E ⊢ e₁ - e₂ ⇓ₐ minus v₁ v₂
+
+  times-e : ∀{e₁ e₂}{v₁ v₂}
+
+          → E ⊢ e₁ ⇓ₐ v₁
+          → E ⊢ e₂ ⇓ₐ v₂
+            ---------------------
+          → E ⊢ e₁ × e₂ ⇓ₐ times v₁ v₂
 
 
 data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
-  -- ...
+  true-e   :
+
+            -------------
+            E ⊢ ⊤ ⇓₀ true
+
+  false-e   :
+
+            -------------
+            E ⊢ ⊥ ⇓₀ false
+
+  not-e : ∀{e}{v}
+
+          → E ⊢ e ⇓₀ v
+            ---------------------
+          → E ⊢ ¬ e ⇓₀ not v
+
+  and-e  : ∀{e₁ e₂}{v₁ v₂}
+
+          → E ⊢ e₁ ⇓₀ v₁
+          → E ⊢ e₂ ⇓₀ v₂
+            ---------------------
+          → E ⊢ e₁ ∧ e₂ ⇓₀ and v₁ v₂
+
+  or-e  : ∀{e₁ e₂}{v₁ v₂}
+
+          → E ⊢ e₁ ⇓₀ v₁
+          → E ⊢ e₂ ⇓₀ v₂
+            ---------------------
+          → E ⊢ e₁ ∨ e₂ ⇓₀ or v₁ v₂
+
+-- TODO _≡_ : Exp-int n → Exp-int n → Exp-bool n
+-- TODO _≠_ : Exp-int n → Exp-int n → Exp-bool n
+-- TODO _<_ : Exp-int n → Exp-int n → Exp-bool n
+{-
+  leq-e  : ∀{e₁ e₂}{v₁ v₂}
+
+          → E ⊢ e₁ ⇓ₐ v₁
+          → E ⊢ e₂ ⇓ₐ v₂
+            ---------------------
+          → E ⊢ e₁ ≤ e₂ ⇓₀ leq v₁ v₂
+-}
+-- TODO _>_ : Exp-int n → Exp-int n → Exp-bool n
+-- TODO _≥_ : Exp-int n → Exp-int n → Exp-bool n
 
 data _⊢_⇓_ {n : ℕ} ( E : Vec ℤ n) : Comm n → (E : Vec ℤ n) → Set where
   skip-e : 
            -------------------
            E ⊢ skip ⇓ E
-{-
-  assign-e : ∀{e₁}{v₁}{n}{x}
-             → E ⊢ e₁ ⇓ₐ v₁
-             ---------------
-             E ⊢ x := n ⇓ E [ x ]= n
 
-  seq-e : ∀{c₀ c₁}
-        → E₀ ⊢ c₀ ⇓ E₁
-        → E₁ ⊢ c₁ ⇓ E₂
-        --------------
-        → E₀ ⊢ c₀ $ c₁ ⇓ E₂
--}
+  seq-e  : ∀{c₁ c₂}{e₁ e₂}
+
+          → E ⊢ c₁ ⇓ e₁
+          → e₁ ⊢ c₂ ⇓ e₂
+            ---------------------
+          → E ⊢ c₁ , c₂ ⇓ e₂
+
+  assign-e  : ∀{a}{n}{x}
+
+          → E ⊢ a ⇓ₐ n
+            ---------------------
+          → E ⊢ (x ≔ a) ⇓ (E [ x ]≔ n)
+
+  -- TODO if_then_else_ : Exp-bool n → Comm n → Comm n → Comm n
+  -- TODO while_do_ : Exp-bool n → Comm n
 \end{code}
 
 By using appropriate type indices, it is possible to extend this technique to work even for languages with elaborate static semantics.
