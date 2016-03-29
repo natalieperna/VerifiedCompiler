@@ -67,7 +67,7 @@ data Comm (n : ℕ) : Set where
   _,_  : Comm n → Comm n → Comm n -- sequential composition
   _≔_ : Fin n → Exp-int n → Comm n
   if_then_else_ : Exp-bool n → Comm n → Comm n → Comm n
-  while_do_ : Exp-bool n → Comm n
+  while_do_ : Exp-bool n → Comm n → Comm n
 \end{code}
 
 This allows us to express in the _type_ of our big-step semantics relation that the environment `E` (here we used the length-indexed
@@ -165,6 +165,7 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
 -- TODO _>_ : Exp-int n → Exp-int n → Exp-bool n
 -- TODO _≥_ : Exp-int n → Exp-int n → Exp-bool n
 
+-- RSD p. 133
 data _⊢_⇓_ {n : ℕ} ( E : Vec ℤ n) : Comm n → (E : Vec ℤ n) → Set where
   skip-e : 
            -------------------
@@ -183,8 +184,33 @@ data _⊢_⇓_ {n : ℕ} ( E : Vec ℤ n) : Comm n → (E : Vec ℤ n) → Set w
             ---------------------
           → E ⊢ (x ≔ a) ⇓ (E [ x ]≔ n)
 
-  -- TODO if_then_else_ : Exp-bool n → Comm n → Comm n → Comm n
-  -- TODO while_do_ : Exp-bool n → Comm n
+  if-true-e  : ∀{b}{c₁ c₂}{e₁}
+
+          → E ⊢ b ⇓₀ true
+          → E ⊢ c₁ ⇓ e₁
+            ---------------------
+          → E ⊢ if b then c₁ else c₂ ⇓ e₁
+
+  if-false-e  : ∀{b}{c₁ c₂}{e₂}
+
+          → E ⊢ b ⇓₀ false
+          → E ⊢ c₂ ⇓ e₂
+            ---------------------
+          → E ⊢ if b then c₁ else c₂ ⇓ e₂
+
+  while-true-e  : ∀{b}{c}{E′ E″}
+
+          → E ⊢ b ⇓₀ true
+          → E ⊢ c ⇓ E′
+          → E′ ⊢ while b do c ⇓ E″
+            ---------------------
+          → E ⊢ while b do c ⇓ E″
+
+  while-false-e  : ∀{b}{c}
+
+          → E ⊢ b ⇓₀ false
+            ---------------------
+          → E ⊢ while b do c ⇓ E
 \end{code}
 
 By using appropriate type indices, it is possible to extend this technique to work even for languages with elaborate static semantics.
