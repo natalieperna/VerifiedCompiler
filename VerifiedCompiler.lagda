@@ -2,7 +2,7 @@
 module VerifiedCompiler where
 
 open import Data.Fin hiding (_+_;_-_;_≤_;_<_)
-open import Data.Nat hiding (_+_;_≤_;_≥_;_<_;_>_;_≟_)
+open import Data.Nat hiding (_+_;_≤_;_≥_;_<_;_>_;_≟_;_≤?_)
 open import Data.Integer renaming (
   _+_ to plus;
   _*_ to times;
@@ -150,14 +150,14 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
           → E ⊢ e₁ ≡ e₂ ⇓₀ not ⌊ v₁ ≟ v₂ ⌋
 
 -- TODO _<_ : Exp-int n → Exp-int n → Exp-bool n
-{-
+
   leq-e  : ∀{e₁ e₂}{v₁ v₂}
 
           → E ⊢ e₁ ⇓ₐ v₁
           → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
-          → E ⊢ e₁ ≤ e₂ ⇓₀ leq v₁ v₂
--}
+          → E ⊢ e₁ ≤ e₂ ⇓₀ ⌊ v₁ ≤? v₂ ⌋
+
 -- TODO _>_ : Exp-int n → Exp-int n → Exp-bool n
 -- TODO _≥_ : Exp-int n → Exp-int n → Exp-bool n
 \end{code}
