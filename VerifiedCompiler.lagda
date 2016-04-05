@@ -149,7 +149,12 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
             ---------------------
           → E ⊢ e₁ ≡ e₂ ⇓₀ not ⌊ v₁ ≟ v₂ ⌋
 
--- TODO _<_ : Exp-int n → Exp-int n → Exp-bool n
+  less-e  : ∀{e₁ e₂}{v₁ v₂}
+
+          → E ⊢ e₁ ⇓ₐ v₁
+          → E ⊢ e₂ ⇓ₐ v₂
+            ---------------------
+          → E ⊢ e₁ < e₂ ⇓₀ and (⌊ v₁ ≤? v₂ ⌋) (not ⌊ v₁ ≟ v₂ ⌋)
 
   leq-e  : ∀{e₁ e₂}{v₁ v₂}
 
@@ -158,8 +163,19 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
             ---------------------
           → E ⊢ e₁ ≤ e₂ ⇓₀ ⌊ v₁ ≤? v₂ ⌋
 
--- TODO _>_ : Exp-int n → Exp-int n → Exp-bool n
--- TODO _≥_ : Exp-int n → Exp-int n → Exp-bool n
+  greater-e  : ∀{e₁ e₂}{v₁ v₂}
+
+          → E ⊢ e₁ ⇓ₐ v₁
+          → E ⊢ e₂ ⇓ₐ v₂
+            ---------------------
+          → E ⊢ e₁ > e₂ ⇓₀ not ⌊ v₁ ≤? v₂ ⌋
+
+  geq-e  : ∀{e₁ e₂}{v₁ v₂}
+
+          → E ⊢ e₁ ⇓ₐ v₁
+          → E ⊢ e₂ ⇓ₐ v₂
+            ---------------------
+          → E ⊢ e₁ ≥ e₂ ⇓₀ or (not ⌊ v₁ ≤? v₂ ⌋) (⌊ v₁ ≟ v₂ ⌋)
 \end{code}
 
 RSD p. 133:
