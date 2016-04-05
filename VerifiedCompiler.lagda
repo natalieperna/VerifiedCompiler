@@ -146,7 +146,13 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
             ---------------------
           → E ⊢ e₁ ≡ e₂ ⇓₀ equals v₁ v₂
 
--- TODO _≠_ : Exp-int n → Exp-int n → Exp-bool n
+  nequals-e  : ∀{e₁ e₂}{v₁ v₂}
+
+          → E ⊢ e₁ ⇓ₐ v₁
+          → E ⊢ e₂ ⇓ₐ v₂
+            ---------------------
+          → E ⊢ e₁ ≡ e₂ ⇓₀ not (equals v₁ v₂)
+
 -- TODO _<_ : Exp-int n → Exp-int n → Exp-bool n
 {-
   leq-e  : ∀{e₁ e₂}{v₁ v₂}
