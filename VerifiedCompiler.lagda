@@ -11,14 +11,10 @@ open import Data.Integer renaming (
   _≤_ to leq)
 open import Data.Vec
 open import Data.Bool hiding (if_then_else_;_≟_) renaming (_∧_ to and; _∨_ to or)
-open import Relation.Nullary hiding (¬_)
+open import Relation.Nullary.Decidable
 \end{code}
 
 \begin{code}
-equals : ℤ → ℤ → Bool
-equals m n with m ≟ n
-...       | yes _ = true
-...       | no _  = false
 \end{code}
 
 RSD p. 135:
@@ -144,14 +140,14 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
           → E ⊢ e₁ ⇓ₐ v₁
           → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
-          → E ⊢ e₁ ≡ e₂ ⇓₀ equals v₁ v₂
+          → E ⊢ e₁ ≡ e₂ ⇓₀ ⌊ v₁ ≟ v₂ ⌋
 
   nequals-e  : ∀{e₁ e₂}{v₁ v₂}
 
           → E ⊢ e₁ ⇓ₐ v₁
           → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
-          → E ⊢ e₁ ≡ e₂ ⇓₀ not (equals v₁ v₂)
+          → E ⊢ e₁ ≡ e₂ ⇓₀ not ⌊ v₁ ≟ v₂ ⌋
 
 -- TODO _<_ : Exp-int n → Exp-int n → Exp-bool n
 {-
