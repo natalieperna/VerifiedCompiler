@@ -10,11 +10,8 @@ open import Data.Integer renaming (
   _-_ to minus;
   _≤_ to leq)
 open import Data.Vec
-open import Data.Bool hiding (if_then_else_;_≟_) renaming (_∧_ to and; _∨_ to or)
+open import Data.Bool hiding (if_then_else_;_≟_) renaming (_∧_ to _and_; _∨_ to _or_)
 open import Relation.Nullary.Decidable
-\end{code}
-
-\begin{code}
 \end{code}
 
 RSD p. 135:
@@ -126,14 +123,14 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
           → E ⊢ e₁ ⇓₀ v₁
           → E ⊢ e₂ ⇓₀ v₂
             ---------------------
-          → E ⊢ e₁ ∧ e₂ ⇓₀ and v₁ v₂
+          → E ⊢ e₁ ∧ e₂ ⇓₀ v₁ and v₂
 
   or-e  : ∀{e₁ e₂}{v₁ v₂}
 
           → E ⊢ e₁ ⇓₀ v₁
           → E ⊢ e₂ ⇓₀ v₂
             ---------------------
-          → E ⊢ e₁ ∨ e₂ ⇓₀ or v₁ v₂
+          → E ⊢ e₁ ∨ e₂ ⇓₀ (v₁ or v₂)
 
   equals-e  : ∀{e₁ e₂}{v₁ v₂}
 
@@ -154,7 +151,7 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
           → E ⊢ e₁ ⇓ₐ v₁
           → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
-          → E ⊢ e₁ < e₂ ⇓₀ and (⌊ v₁ ≤? v₂ ⌋) (not ⌊ v₁ ≟ v₂ ⌋)
+          → E ⊢ e₁ < e₂ ⇓₀ (⌊ v₁ ≤? v₂ ⌋) and (not ⌊ v₁ ≟ v₂ ⌋)
 
   leq-e  : ∀{e₁ e₂}{v₁ v₂}
 
@@ -175,7 +172,7 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
           → E ⊢ e₁ ⇓ₐ v₁
           → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
-          → E ⊢ e₁ ≥ e₂ ⇓₀ or (not ⌊ v₁ ≤? v₂ ⌋) (⌊ v₁ ≟ v₂ ⌋)
+          → E ⊢ e₁ ≥ e₂ ⇓₀ (not ⌊ v₁ ≤? v₂ ⌋ or ⌊ v₁ ≟ v₂ ⌋)
 \end{code}
 
 RSD p. 133:
