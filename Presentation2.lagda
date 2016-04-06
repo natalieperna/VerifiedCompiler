@@ -1,3 +1,52 @@
+\documentclass{beamer}
+
+\usetheme{Antibes}
+
+\usepackage{agda}
+
+\usepackage{amssymb}
+\usepackage{bbm}
+\usepackage[greek,english]{babel}
+
+\usepackage{ucs}
+\usepackage{autofe}
+
+\DeclareUnicodeCharacter{8336}{\ensuremath{_a}}
+\DeclareUnicodeCharacter{8788}{:=}
+\DeclareUnicodeCharacter{8799}{\ensuremath{\stackrel{?}{=}}}
+
+\AtBeginSection[]{
+  \begin{frame}
+  \vfill
+  \centering
+  \begin{beamercolorbox}[sep=8pt,center,shadow=true,rounded=true]{title}
+    \usebeamerfont{title}\insertsectionhead\par%
+  \end{beamercolorbox}
+  \vfill
+  \end{frame}
+}
+
+\title{A (Toy) Verified Compiler in Agda}
+
+\author{Natalie Perna\\
+  pernanm@mcmaster.ca}
+
+\institute{Department of Computing and Software\\
+    McMaster University}
+
+\date{April 11, 2016}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}{Outline}
+    \tableofcontents
+\end{frame}
+
+\iffalse
 \begin{code}
 module Presentation2 where
 
@@ -13,9 +62,9 @@ open import Data.Vec
 open import Data.Bool hiding (if_then_else_;_≟_) renaming (_∧_ to and; _∨_ to or)
 open import Relation.Nullary.Decidable
 \end{code}
+\fi
 
-\begin{code}
-\end{code}
+\section{Agda}
 
 RSD p. 135:
 
@@ -227,4 +276,5 @@ data _⊢_⇓_ {n : ℕ} ( E : Vec ℤ n) : Comm n → (E : Vec ℤ n) → Set w
             ---------------------
           → E ⊢ while b do c ⇓ E
 \end{code}
+\end{document}
 
