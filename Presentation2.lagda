@@ -109,7 +109,6 @@ data Exp-bool (n : ℕ): Set where
 The command syntax is similarly based based on the While\textsuperscript{int} programming language from RSD.
 
 \includegraphics[width=\textwidth]{fig51.png}
-
 \end{frame}
 
 \begin{frame}[fragile]
@@ -123,13 +122,17 @@ data Comm (n : ℕ) : Set where
 \end{code}
 \end{frame}
 
-RSD p. 135:
-
+\iffalse
 \begin{code}
 infixl 5 _⊢_⇓ₐ_
 infixl 5 _⊢_⇓₀_
 infixl 5 _⊢_⇓_
+\end{code}
+\fi
 
+\section{Semantics}
+
+\begin{code}
 data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℤ n) : Exp-int n → ℤ → Set where
   lit-e   : ∀{n}
 
