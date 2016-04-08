@@ -15,6 +15,9 @@
 \DeclareUnicodeCharacter{8788}{:=}
 \DeclareUnicodeCharacter{8799}{\ensuremath{\stackrel{?}{=}}}
 
+\usepackage{graphicx}
+\graphicspath{ {../images/} }
+
 \AtBeginSection[]{
   \begin{frame}
   \vfill
@@ -64,10 +67,16 @@ open import Relation.Nullary.Decidable
 \end{code}
 \fi
 
-\section{Agda}
+\section{Syntax}
 
-RSD p. 135:
+\begin{frame}
+The abstract syntax of expressions are based on the While\textsuperscript{int} programming language from RSD.
 
+\includegraphics[width=\textwidth]{fig53.png}
+
+\end{frame}
+
+\begin{frame}[fragile]
 \begin{code}
 data Exp-int (n : ℕ) : Set where
   Lit : ℤ → Exp-int n
@@ -77,7 +86,9 @@ data Exp-int (n : ℕ) : Set where
   _-_ : Exp-int n → Exp-int n → Exp-int n
   _×_ : Exp-int n → Exp-int n → Exp-int n
 \end{code}
+\end{frame}
 
+\begin{frame}[fragile]
 \begin{code}
 data Exp-bool (n : ℕ): Set where
   ⊤ : Exp-bool n
@@ -92,9 +103,16 @@ data Exp-bool (n : ℕ): Set where
   _>_ : Exp-int n → Exp-int n → Exp-bool n
   _≥_ : Exp-int n → Exp-int n → Exp-bool n
 \end{code}
+\end{frame}
 
-RSD p. 131:
+\begin{frame}
+The command syntax is similarly based based on the While\textsuperscript{int} programming language from RSD.
 
+\includegraphics[width=\textwidth]{fig51.png}
+
+\end{frame}
+
+\begin{frame}[fragile]
 \begin{code}
 data Comm (n : ℕ) : Set where
   skip : Comm n
@@ -103,6 +121,7 @@ data Comm (n : ℕ) : Set where
   if_then_else_ : Exp-bool n → Comm n → Comm n → Comm n
   while_do_ : Exp-bool n → Comm n → Comm n
 \end{code}
+\end{frame}
 
 RSD p. 135:
 

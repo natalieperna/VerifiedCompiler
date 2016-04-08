@@ -1,4 +1,5 @@
 *.agdai
 *.log
+.#*
 latex/
 
