@@ -76,8 +76,6 @@ data Exp-int (n : ℕ) : Set where
   _+_ : Exp-int n → Exp-int n → Exp-int n
   _-_ : Exp-int n → Exp-int n → Exp-int n
   _×_ : Exp-int n → Exp-int n → Exp-int n
-  --_div_ : Exp-int n → Exp-int n → Exp-int n
-  --_mod_ : Exp-int n → Exp-int n → Exp-int n
 \end{code}
 
 \begin{code}
