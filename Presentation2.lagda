@@ -5,6 +5,7 @@
 \usepackage{agda}
 
 \usepackage{amssymb}
+\usepackage{stmaryrd}
 \usepackage{bbm}
 \usepackage[greek,english]{babel}
 
@@ -132,6 +133,16 @@ infixl 5 _⊢_⇓_
 
 \section{Semantics}
 
+\begin{frame}
+Semantics of integer expressions of While\textsuperscript{int} are defined in RSD as follows:
+
+The functional $\llbracket \cdot \rrbracket$ maps every $e \in Exp_{int}$ to a function $\llbracket e \rrbracket : \Sigma \to \mathbb{Z}$.
+
+\includegraphics[width=\textwidth]{def53a.png}
+
+\end{frame}
+
+\begin{frame}[fragile,allowframebreaks]
 \begin{code}
 data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℤ n) : Exp-int n → ℤ → Set where
   lit-e   : ∀{n}
@@ -144,7 +155,11 @@ data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℤ n) : Exp-int n → ℤ → Set where
           → E [ x ]= n
             -------------
           → E ⊢ Var x ⇓ₐ n
+\end{code}
 
+\framebreak
+
+\begin{code}
   negative-e : ∀{e}{v}
 
           → E ⊢ e ⇓ₐ v
@@ -157,7 +172,11 @@ data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℤ n) : Exp-int n → ℤ → Set where
           → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
           → E ⊢ e₁ + e₂ ⇓ₐ plus v₁ v₂
+\end{code}
 
+\framebreak
+
+\begin{code}
   minus-e  : ∀{e₁ e₂}{v₁ v₂}
 
           → E ⊢ e₁ ⇓ₐ v₁
@@ -171,8 +190,20 @@ data _⊢_⇓ₐ_ {n : ℕ} ( E : Vec ℤ n) : Exp-int n → ℤ → Set where
           → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
           → E ⊢ e₁ × e₂ ⇓ₐ times v₁ v₂
+\end{code}
+\end{frame}
 
+\begin{frame}
+Semantics of boolean expressions of While\textsuperscript{int} are defined in RSD as follows:
 
+The functional $\llbracket \cdot \rrbracket$ maps every $b \in Exp_{bool}$ to a function $\llbracket b \rrbracket : \Sigma \to \{ F, T \}$.
+
+\includegraphics[width=\textwidth]{def53b.png}
+
+\end{frame}
+
+\begin{frame}[fragile,allowframebreaks]
+\begin{code}
 data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
   true-e   :
 
@@ -189,7 +220,11 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
           → E ⊢ e ⇓₀ v
             ---------------------
           → E ⊢ ¬ e ⇓₀ not v
+\end{code}
 
+\framebreak
+
+\begin{code}
   and-e  : ∀{e₁ e₂}{v₁ v₂}
 
           → E ⊢ e₁ ⇓₀ v₁
@@ -203,7 +238,11 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
           → E ⊢ e₂ ⇓₀ v₂
             ---------------------
           → E ⊢ e₁ ∨ e₂ ⇓₀ or v₁ v₂
+\end{code}
 
+\framebreak
+
+\begin{code}
   equals-e  : ∀{e₁ e₂}{v₁ v₂}
 
           → E ⊢ e₁ ⇓ₐ v₁
@@ -217,7 +256,11 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
           → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
           → E ⊢ e₁ ≡ e₂ ⇓₀ not ⌊ v₁ ≟ v₂ ⌋
+\end{code}
 
+\framebreak
+
+\begin{code}
   less-e  : ∀{e₁ e₂}{v₁ v₂}
 
           → E ⊢ e₁ ⇓ₐ v₁
@@ -231,7 +274,11 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
           → E ⊢ e₂ ⇓ₐ v₂
             ---------------------
           → E ⊢ e₁ ≤ e₂ ⇓₀ ⌊ v₁ ≤? v₂ ⌋
+\end{code}
 
+\framebreak
+
+\begin{code}
   greater-e  : ∀{e₁ e₂}{v₁ v₂}
 
           → E ⊢ e₁ ⇓ₐ v₁
@@ -246,6 +293,7 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
             ---------------------
           → E ⊢ e₁ ≥ e₂ ⇓₀ or (not ⌊ v₁ ≤? v₂ ⌋) (⌊ v₁ ≟ v₂ ⌋)
 \end{code}
+\end{frame}
 
 RSD p. 133:
 
