@@ -30,6 +30,13 @@
   \end{frame}
 }
 
+\setlength{\leftskip}{0cm}
+\setlength{\mathindent}{0pt}
+
+\renewenvironment{code}
+{\noindent\ignorespaces\advance\leftskip\mathindent\AgdaCodeStyle\pboxed}
+{\endpboxed\par\noindent\ignorespacesafterend}
+
 \title{A (Toy) Verified Compiler in Agda}
 
 \author{Natalie Perna\\
@@ -295,8 +302,14 @@ data _⊢_⇓₀_ {n : ℕ} ( E : Vec ℤ n) : Exp-bool n → Bool → Set where
 \end{code}
 \end{frame}
 
-RSD p. 133:
+\begin{frame}
+Semantics of commands of While\textsuperscript{int} are defined in RSD using a standard operational, natrual style semantics based on an evaluation relation:
 
+\includegraphics[width=\textwidth]{fig52.png}
+
+\end{frame}
+
+\begin{frame}[fragile,allowframebreaks]
 \begin{code}
 data _⊢_⇓_ {n : ℕ} ( E : Vec ℤ n) : Comm n → (E : Vec ℤ n) → Set where
   skip-e : 
@@ -309,13 +322,21 @@ data _⊢_⇓_ {n : ℕ} ( E : Vec ℤ n) : Comm n → (E : Vec ℤ n) → Set w
           → e₁ ⊢ c₂ ⇓ e₂
             ---------------------
           → E ⊢ c₁ , c₂ ⇓ e₂
+\end{code}
 
+\framebreak
+
+\begin{code}
   assign-e  : ∀{a}{n}{x}
 
           → E ⊢ a ⇓ₐ n
             ---------------------
           → E ⊢ (x ≔ a) ⇓ (E [ x ]≔ n)
+\end{code}
 
+\framebreak
+
+\begin{code}
   if-true-e  : ∀{b}{c₁ c₂}{e₁}
 
           → E ⊢ b ⇓₀ true
@@ -329,7 +350,11 @@ data _⊢_⇓_ {n : ℕ} ( E : Vec ℤ n) : Comm n → (E : Vec ℤ n) → Set w
           → E ⊢ c₂ ⇓ e₂
             ---------------------
           → E ⊢ if b then c₁ else c₂ ⇓ e₂
+\end{code}
 
+\framebreak
+
+\begin{code}
   while-true-e  : ∀{b}{c}{E′ E″}
 
           → E ⊢ b ⇓₀ true
@@ -344,5 +369,6 @@ data _⊢_⇓_ {n : ℕ} ( E : Vec ℤ n) : Comm n → (E : Vec ℤ n) → Set w
             ---------------------
           → E ⊢ while b do c ⇓ E
 \end{code}
+\end{frame}
 \end{document}
 
