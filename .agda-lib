@@ -1,0 +1,3 @@
+name: VerifiedCompiler
+depend: standard-library
+include: .
